@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+const clientUrl = process.env.CLIENT_URL || "https://hiretrack-8iy2.onrender.com";
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
