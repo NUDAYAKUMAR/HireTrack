@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 import authRoutes from "./routes/authRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import { testEmailConnection } from "./services/emailService.js";
 
 dotenv.config();
 
@@ -91,6 +92,7 @@ const startServer = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("MongoDB connected");
+    await testEmailConnection();   // verify SMTP on startup
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

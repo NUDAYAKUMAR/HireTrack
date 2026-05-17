@@ -3,16 +3,34 @@ import nodemailer from "nodemailer";
 // Lazy getter — transporter is created on first call so env vars are always loaded
 const getTransporter = () =>
   nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === "true",
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: process.env.SMTP_SECURE === "true",   // true = SSL on port 465
     auth: process.env.SMTP_USER
       ? {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS
         }
-      : undefined
+      : undefined,
+    tls: {
+      rejectUnauthorized: false   // avoids cert-chain issues on some hosts
+    }
   });
+
+/** Call this at startup to verify SMTP config is working. */
+export const testEmailConnection = async () => {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log("⚠️  Email: SMTP not configured — skipping connection test.");
+    return;
+  }
+  try {
+    await getTransporter().verify();
+    console.log("✅ Email: SMTP connection verified successfully.");
+  } catch (err) {
+    console.error("❌ Email: SMTP connection FAILED —", err.message);
+    console.error("   Check SMTP_USER / SMTP_PASS in .env (Gmail → use an App Password).");
+  }
+};
 
 export const sendInterviewInvitation = async ({ to, candidateName, title, link, pin, scheduledAt }) => {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
