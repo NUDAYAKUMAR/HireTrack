@@ -36,6 +36,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   const [warnMsg,       setWarnMsg]       = useState("");
   const [kicked,        setKicked]        = useState(false);
   const [fsGranted,     setFsGranted]     = useState(isRecruiter);
+  const [output,        setOutput]        = useState("");
   const [isRunning,     setIsRunning]     = useState(false);
   const [isError,       setIsError]       = useState(false);
   const [videoEnabled,  setVideoEnabled]  = useState(true);
