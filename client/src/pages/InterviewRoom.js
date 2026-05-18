@@ -36,9 +36,10 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   const [warnMsg,       setWarnMsg]       = useState("");
   const [kicked,        setKicked]        = useState(false);
   const [fsGranted,     setFsGranted]     = useState(isRecruiter);
-  const [output,        setOutput]        = useState("");
   const [isRunning,     setIsRunning]     = useState(false);
   const [isError,       setIsError]       = useState(false);
+  const [videoEnabled,  setVideoEnabled]  = useState(true);
+  const [audioEnabled,  setAudioEnabled]  = useState(true);
 
   const socketRef   = useRef(null);
   const myVidRef    = useRef(null);
@@ -290,6 +291,16 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       }
     });
 
+    let peerReady = false;
+
+    const initiateOffer = async () => {
+      if (!localSRef.current) return;
+      const pc = createPC(localSRef.current);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("webrtc:offer", { roomId, offer });
+    };
+
     /* When someone new joins, tell them we are ready (if we already have camera) */
     socket.on("room:user-joined", () => {
       if (localSRef.current) socket.emit("webrtc:ready", { roomId });
@@ -299,11 +310,15 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
 
     /* WebRTC – when the other peer is ready with their camera, initiate offer */
     socket.on("webrtc:ready", async () => {
+      peerReady = true;
       if (!localSRef.current) return;
-      const pc = createPC(localSRef.current);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("webrtc:offer", { roomId, offer });
+      
+      if (isRecruiter) {
+        await initiateOffer();
+      } else {
+        // Re-emit ready so caller (recruiter) knows to initiate offer
+        socket.emit("webrtc:ready", { roomId });
+      }
     });
     socket.on("webrtc:offer", async (offer) => {
       if (!localSRef.current) return;
@@ -345,8 +360,14 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       .then(stream => {
         localSRef.current = stream;
         if (myVidRef.current) myVidRef.current.srcObject = stream;
-        // Tell others we have our camera ready
+        
+        // Notify others
         socket.emit("webrtc:ready", { roomId });
+
+        // If recruiter and candidate was already in room ready, kickstart offer
+        if (isRecruiter && peerReady) {
+          initiateOffer();
+        }
       })
       .catch(() => { if (!isRecruiter) triggerWarn("camera-denied", "Camera access denied"); });
 
@@ -389,6 +410,26 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   const handleLangChange = e => {
     setLanguage(e.target.value);
     socketRef.current?.emit("lang:change", { roomId: interview.pin, language: e.target.value });
+  };
+
+  const toggleVideo = () => {
+    if (localSRef.current) {
+      const track = localSRef.current.getVideoTracks()[0];
+      if (track) {
+        track.enabled = !track.enabled;
+        setVideoEnabled(track.enabled);
+      }
+    }
+  };
+
+  const toggleAudio = () => {
+    if (localSRef.current) {
+      const track = localSRef.current.getAudioTracks()[0];
+      if (track) {
+        track.enabled = !track.enabled;
+        setAudioEnabled(track.enabled);
+      }
+    }
   };
 
   /* ─── FULLSCREEN GATE (candidate) ─── */
@@ -557,6 +598,14 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
             <div className="cam-box local-cam-pip">
               <video ref={myVidRef} autoPlay muted playsInline className="cam-vid" />
               <span className="cam-label">You</span>
+              <div className="cam-controls">
+                <button type="button" className="cam-ctrl-btn" onClick={toggleVideo} title={videoEnabled ? "Turn Camera Off" : "Turn Camera On"}>
+                  {videoEnabled ? "📹" : "❌📹"}
+                </button>
+                <button type="button" className="cam-ctrl-btn" onClick={toggleAudio} title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}>
+                  {audioEnabled ? "🎙️" : "❌🎙️"}
+                </button>
+              </div>
             </div>
             <button className="cam-fullscreen-btn" onClick={(e) => {
                const el = document.getElementById("cam-container");
