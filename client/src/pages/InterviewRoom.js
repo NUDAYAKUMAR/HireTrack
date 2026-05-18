@@ -54,6 +54,9 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
 
   /* ─── WebRTC peer setup ─── */
   const createPC = useCallback((stream) => {
+    if (peerRef.current) {
+      try { peerRef.current.close(); } catch (_) {}
+    }
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -282,6 +285,8 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       if (localSRef.current) socket.emit("webrtc:ready", { roomId });
     });
 
+    const iceQueue = [];
+
     /* WebRTC – when the other peer is ready with their camera, initiate offer */
     socket.on("webrtc:ready", async () => {
       if (!localSRef.current) return;
@@ -297,12 +302,32 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       socket.emit("webrtc:answer", { roomId, answer });
+
+      // Process any queued candidates
+      while (iceQueue.length > 0) {
+        const cand = iceQueue.shift();
+        try { await pc.addIceCandidate(cand); } catch (_) {}
+      }
     });
     socket.on("webrtc:answer", async (answer) => {
-      if (peerRef.current) await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+      const pc = peerRef.current;
+      if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        // Process any queued candidates
+        while (iceQueue.length > 0) {
+          const cand = iceQueue.shift();
+          try { await pc.addIceCandidate(cand); } catch (_) {}
+        }
+      }
     });
     socket.on("webrtc:ice", async (candidate) => {
-      try { if (peerRef.current) await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
+      const cand = new RTCIceCandidate(candidate);
+      const pc = peerRef.current;
+      if (pc && pc.remoteDescription) {
+        try { await pc.addIceCandidate(cand); } catch (_) {}
+      } else {
+        iceQueue.push(cand);
+      }
     });
 
     /* camera – use localSRef so WebRTC handlers can access the stream */
