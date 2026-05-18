@@ -81,20 +81,20 @@ function App() {
                 className={`btn btn-outline-light${activeView === "dashboard" ? " active-nav" : ""}`}
                 onClick={() => setActiveView("dashboard")}
               >
-                Dashboard
+                📊 Dashboard
               </button>
             )}
             <button
               className={`btn btn-outline-light${activeView === "join" ? " active-nav" : ""}`}
               onClick={() => setActiveView("join")}
             >
-              Join Room
+              🔗 Join Room
             </button>
             <span className="nav-user">
               {auth.user?.name} / <em>{role}</em>
             </span>
             <button className="btn btn-light" onClick={logout}>
-              Logout
+              🚪 Logout
             </button>
           </nav>
         )}

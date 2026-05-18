@@ -127,19 +127,19 @@ function RecruiterDashboard({ token, onJoinRoom }) {
       {/* Metrics */}
       <section className="metric-row recruiter-metrics">
         <article className="metric-card">
-          <span>Total interviews</span>
+          <span>📋 Total interviews</span>
           <strong>{totalInterviews}</strong>
         </article>
         <article className="metric-card">
-          <span>Upcoming</span>
+          <span>📅 Upcoming</span>
           <strong>{upcomingInterviews}</strong>
         </article>
         <article className="metric-card">
-          <span>Emails sent</span>
+          <span>✉️ Emails sent</span>
           <strong>{sentEmails}</strong>
         </article>
         <article className="metric-card">
-          <span>Email failures</span>
+          <span>⚠️ Email failures</span>
           <strong>{failedEmails}</strong>
         </article>
       </section>
@@ -190,7 +190,7 @@ function RecruiterDashboard({ token, onJoinRoom }) {
             rows={3}
             className="desc-textarea"
           />
-          <button className="btn btn-primary">Generate link + PIN</button>
+          <button className="btn btn-primary">⚡ Generate link + PIN</button>
         </form>
 
         {/* Interviews list */}
@@ -231,35 +231,35 @@ function RecruiterDashboard({ token, onJoinRoom }) {
                   <div className="card-actions">
                     <button
                       type="button"
-                      className="btn btn-outline-primary btn-sm"
+                      className="btn btn-info btn-sm"
                       onClick={() => sendEmail(interview._id)}
                       disabled={sendingId === interview._id}
                     >
-                      {sendingId === interview._id ? "Sending..." : "Send Email"}
+                      {sendingId === interview._id ? "⏳ Sending..." : "✉ Send Email"}
                     </button>
                     <button
                       type="button"
                       className="btn btn-outline-secondary btn-sm"
                       onClick={() => navigator.clipboard?.writeText(interview.interviewLink)}
                     >
-                      Copy Link
+                      📋 Copy Link
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary btn-sm"
+                      className="btn btn-success btn-sm"
                       onClick={() => onJoinRoom?.(interview)}
                     >
-                      Open Room
+                      ▶ Open Room
                     </button>
                     <button
                       type="button"
-                      className="btn btn-outline-secondary btn-sm"
+                      className="btn btn-outline-primary btn-sm"
                       onClick={() => {
                         setExpandedId(isExpanded ? null : interview._id);
                         setQuestionInput("");
                       }}
                     >
-                      {isExpanded ? "Hide" : "Questions"}
+                      {isExpanded ? "▲ Hide" : "❓ Questions"}
                     </button>
                   </div>
 

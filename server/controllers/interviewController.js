@@ -119,6 +119,7 @@ export const sendInterviewEmail = async (req, res) => {
       to: interview.candidateEmail,
       candidateName: interview.candidateName,
       title: interview.title,
+      description: interview.description,
       link: interview.interviewLink,
       pin: interview.pin,
       scheduledAt: interview.scheduledAt
@@ -131,12 +132,14 @@ export const sendInterviewEmail = async (req, res) => {
     if (!email.sent) {
       return res.status(500).json({
         message: email.reason || "Email could not be sent",
+        provider: email.provider,
         interview
       });
     }
 
     res.json({
       message: "Invitation email sent",
+      provider: email.provider,
       interview
     });
   } catch (error) {

@@ -54,7 +54,7 @@ function JoinInterview({ onJoined }) {
           onChange={(event) => setPin(event.target.value.replace(/\D/g, ""))}
         />
         <button className="btn btn-primary" disabled={loading || pin.length !== 6}>
-          {loading ? "Checking..." : "Join Interview"}
+          {loading ? "⏳ Checking..." : "🚀 Join Interview"}
         </button>
       </form>
 

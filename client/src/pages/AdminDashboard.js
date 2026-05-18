@@ -86,22 +86,20 @@ function AdminDashboard({ token }) {
       {/* Stats */}
       <section className="metric-row">
         <article className="metric-card">
-          <span>Total users</span>
+          <span>👥 Total users</span>
           <strong>{stats?.users ?? "-"}</strong>
         </article>
         <article className="metric-card">
-          <span>Total interviews</span>
+          <span>📋 Total interviews</span>
           <strong>{stats?.interviews ?? "-"}</strong>
         </article>
         <article className="metric-card">
-          <span>Live now</span>
+          <span>🔴 Live now</span>
           <strong>{stats?.liveInterviews ?? "-"}</strong>
         </article>
-        <article className="metric-card" style={{ borderColor: pendingRecruiters.length ? "#f59e0b" : undefined }}>
-          <span>Pending recruiters</span>
-          <strong style={{ color: pendingRecruiters.length ? "#d97706" : undefined }}>
-            {stats?.pendingRecruiters ?? "-"}
-          </strong>
+        <article className="metric-card">
+          <span>⏳ Pending recruiters</span>
+          <strong>{stats?.pendingRecruiters ?? "-"}</strong>
         </article>
       </section>
 
@@ -156,7 +154,7 @@ function AdminDashboard({ token }) {
                       disabled={actionId === user._id}
                       onClick={() => updateUser(user._id, { isActive: true })}
                     >
-                      Approve
+                      ✓ Approve
                     </button>
                   ) : (
                     <button
@@ -164,7 +162,7 @@ function AdminDashboard({ token }) {
                       disabled={actionId === user._id}
                       onClick={() => updateUser(user._id, { isActive: false })}
                     >
-                      Block
+                      ⊘ Block
                     </button>
                   )}
                   <button
@@ -172,7 +170,7 @@ function AdminDashboard({ token }) {
                     disabled={actionId === user._id}
                     onClick={() => deleteUser(user._id, user.name)}
                   >
-                    Delete
+                    ✕ Delete
                   </button>
                 </div>
               </div>

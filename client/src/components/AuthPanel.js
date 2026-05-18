@@ -12,6 +12,7 @@ function AuthPanel({ onAuth }) {
   });
   const [message, setMessage] = useState({ text: "", isError: true });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const set = (field) => (event) => setForm({ ...form, [field]: event.target.value });
 
@@ -69,13 +70,18 @@ function AuthPanel({ onAuth }) {
           and conduct live coding rounds with video and whiteboard support.
         </p>
         <ul className="feature-list">
-          <li>Role-based access for Admin, Recruiter, and Candidate</li>
-          <li>Automated invitation emails with PIN access</li>
-          <li>Real-time coding, chat, and shared whiteboard tools</li>
-          <li>Video sessions with candidate activity monitoring</li>
-          <li>Question management and code execution support</li>
-          <li>Tab-switch, copy, and paste detection</li>
+          <li>🔐 Role-based access for Admin, Recruiter, and Candidate</li>
+          <li>✉️ Automated invitation emails with PIN access</li>
+          <li>💻 Real-time coding, chat, and shared whiteboard tools</li>
+          <li>🎥 Video sessions with candidate activity monitoring</li>
+          <li>❓ Question management and code execution support</li>
+          <li>🛡️ Tab-switch, copy, and paste detection</li>
         </ul>
+        <img 
+          src="/dashboard_banner.png" 
+          alt="Dashboard Banner" 
+          className="auth-banner-img" 
+        />
       </div>
 
       <form className="panel stack-form" onSubmit={handleSubmit}>
@@ -103,14 +109,24 @@ function AuthPanel({ onAuth }) {
           value={form.email}
           onChange={set("email")}
         />
-        <input
-          type="password"
-          placeholder="Password"
-          required
-          minLength={6}
-          value={form.password}
-          onChange={set("password")}
-        />
+        <div className="password-input-container">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            required
+            minLength={6}
+            value={form.password}
+            onChange={set("password")}
+          />
+          <button
+            type="button"
+            className="password-toggle-btn"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label="Toggle password visibility"
+          >
+            {showPassword ? "👁️" : "🙈"}
+          </button>
+        </div>
         {mode === "register" && (
           <>
             <select value={form.role} onChange={set("role")}>
@@ -125,7 +141,7 @@ function AuthPanel({ onAuth }) {
           </>
         )}
         <button className="btn btn-primary" disabled={loading}>
-          {loading ? "Please wait..." : mode === "login" ? "Login" : "Create account"}
+          {loading ? "⏳ Please wait..." : mode === "login" ? "🚀 Login" : "✨ Create account"}
         </button>
         {message.text && (
           <p className={`form-message ${message.isError ? "form-message-error" : "form-message-success"}`}>
