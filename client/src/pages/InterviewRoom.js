@@ -67,15 +67,8 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     });
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
     pc.ontrack = (event) => {
-      if (remVidRef.current) {
-        let remoteStream = remVidRef.current.srcObject;
-        if (!remoteStream || !(remoteStream instanceof MediaStream)) {
-          remoteStream = event.streams[0] || new MediaStream();
-          remVidRef.current.srcObject = remoteStream;
-        }
-        if (!remoteStream.getTracks().includes(event.track)) {
-          remoteStream.addTrack(event.track);
-        }
+      if (remVidRef.current && event.streams[0]) {
+        remVidRef.current.srcObject = event.streams[0];
         remVidRef.current.play().catch(() => {});
       }
     };

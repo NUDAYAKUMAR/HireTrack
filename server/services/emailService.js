@@ -57,11 +57,10 @@ HireTrack
 
 <p><b>PIN:</b> ${pin}</p>
 
-${
-  description
-    ? `<p>${description}</p>`
-    : ""
-}
+${description
+      ? `<p>${description}</p>`
+      : ""
+    }
 
 <a href="${link}"
 style="
@@ -135,19 +134,19 @@ const getTransporter = () => {
       process.env.SMTP_HOST ||
       "smtp.gmail.com",
 
-    port:Number(
+    port: Number(
       process.env.SMTP_PORT || 465
     ),
 
     secure:
-      process.env.SMTP_SECURE==="true",
+      process.env.SMTP_SECURE === "true",
 
-    auth:process.env.SMTP_USER
-      ?{
-          user:process.env.SMTP_USER,
-          pass:process.env.SMTP_PASS
-       }
-      :undefined
+    auth: process.env.SMTP_USER
+      ? {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+      : undefined
   });
 };
 
@@ -158,167 +157,154 @@ const sendEmail = async ({
   html
 }) => {
 
-try{
+  try {
 
-const transporter =
-getTransporter();
+    const transporter =
+      getTransporter();
 
-if(
-process.env.EMAIL_PROVIDER
-==="resend"
-){
+    if (
+      process.env.EMAIL_PROVIDER
+      === "resend"
+    ) {
 
-await transporter.emails.send({
+      await transporter.emails.send({
+        from:
+          process.env.EMAIL_FROM,
+        to,
+        subject,
+        text,
+        html
+      });
 
-from:
-process.env.EMAIL_FROM,
+      return {
+        sent: true,
+        provider: "resend"
+      };
+    }
 
-to,
+    await transporter.sendMail({
+      from:
+        process.env.EMAIL_FROM ||
+        "HireTrack <no-reply@hiretrack.local>",
+      to,
+      subject,
+      text,
+      html
+    });
 
-subject,
+    return {
+      sent: true,
+      provider: "smtp"
+    };
 
-text,
+  }
+  catch (error) {
 
-html
+    return {
 
-});
+      sent: false,
 
-return{
-sent:true,
-provider:"resend"
-};
+      provider:
+        process.env.EMAIL_PROVIDER
+        || "smtp",
 
-}
+      reason:
+        error.response
+        || error.message
 
-await transporter.sendMail({
+    };
 
-from:
-process.env.EMAIL_FROM ||
-"HireTrack <no-reply@hiretrack.local>",
-
-to,
-
-subject,
-
-text,
-
-html
-
-});
-
-return{
-sent:true,
-provider:"smtp"
-};
-
-}
-catch(error){
-
-return{
-
-sent:false,
-
-provider:
-process.env.EMAIL_PROVIDER
-||"smtp",
-
-reason:
-error.response
-||error.message
-
-};
-
-}
+  }
 
 };
 
 export const testEmailConnection =
-async()=>{
+  async () => {
 
-const provider=
-process.env.EMAIL_PROVIDER
-||"smtp";
+    const provider =
+      process.env.EMAIL_PROVIDER
+      || "smtp";
 
-if(provider==="resend"){
+    if (provider === "resend") {
 
-if(
-!process.env.RESEND_API_KEY
-){
+      if (
+        !process.env.RESEND_API_KEY
+      ) {
 
-console.log(
-"❌ Missing RESEND_API_KEY"
-);
+        console.log(
+          "❌ Missing RESEND_API_KEY"
+        );
 
-}else{
+      } else {
 
-console.log(
-"✅ Resend configured"
-);
+        console.log(
+          "✅ Resend configured"
+        );
 
-}
+      }
 
-return;
+      return;
 
-}
+    }
 
-try{
+    try {
 
-await getTransporter()
-.verify();
+      await getTransporter()
+        .verify();
 
-console.log(
-"✅ SMTP verified"
-);
+      console.log(
+        "✅ SMTP verified"
+      );
 
-}
-catch(error){
+    }
+    catch (error) {
 
-console.log(
-"❌ SMTP failed:",
-error.message
-);
+      console.log(
+        "❌ SMTP failed:",
+        error.message
+      );
 
-}
+    }
 
-};
+  };
 
 export const sendInterviewInvitation =
-async({
+  async ({
 
-to,
-candidateName,
-title,
-description,
-link,
-pin,
-scheduledAt
+    to,
+    candidateName,
+    title,
+    description,
+    link,
+    pin,
+    scheduledAt
 
-})=>{
+  }) => {
 
-const subject=
-`Interview invitation: ${title}`;
+    const subject =
+      `Interview invitation: ${title}`;
 
-const {
-html,
-text
-}=buildEmailContent({
+    const {
+      html,
+      text
+    } = buildEmailContent({
 
-candidateName,
-title,
-description,
-link,
-pin,
-scheduledAt
+      candidateName,
+      title,
+      description,
+      link,
+      pin,
+      scheduledAt
 
-});
+    });
 
-return sendEmail({
+    return sendEmail({
 
-to,
-subject,
-text,
-html
+      to,
+      subject,
+      text,
+      html
 
-});
+    });
 
-};
+  };
