@@ -64,8 +64,18 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       ]
     });
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
-    pc.ontrack = ({ streams: [s] }) => {
-      if (remVidRef.current) remVidRef.current.srcObject = s;
+    pc.ontrack = (event) => {
+      if (remVidRef.current) {
+        let remoteStream = remVidRef.current.srcObject;
+        if (!remoteStream || !(remoteStream instanceof MediaStream)) {
+          remoteStream = event.streams[0] || new MediaStream();
+          remVidRef.current.srcObject = remoteStream;
+        }
+        if (!remoteStream.getTracks().includes(event.track)) {
+          remoteStream.addTrack(event.track);
+        }
+        remVidRef.current.play().catch(() => {});
+      }
     };
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) socketRef.current?.emit("webrtc:ice", { roomId: interview.pin, candidate });
