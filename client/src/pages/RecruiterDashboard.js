@@ -120,6 +120,7 @@ function RecruiterDashboard({ token, onJoinRoom }) {
   const totalInterviews = interviews.length;
   const sentEmails = interviews.filter((i) => i.emailStatus === "sent").length;
   const upcomingInterviews = interviews.filter((i) => new Date(i.scheduledAt) >= new Date()).length;
+  const failedEmails = interviews.filter((i) => i.emailStatus === "failed").length;
 
   return (
     <div className="recruiter-dashboard">
@@ -136,6 +137,10 @@ function RecruiterDashboard({ token, onJoinRoom }) {
         <article className="metric-card">
           <span>Emails sent</span>
           <strong>{sentEmails}</strong>
+        </article>
+        <article className="metric-card">
+          <span>Email failures</span>
+          <strong>{failedEmails}</strong>
         </article>
       </section>
 
@@ -179,7 +184,7 @@ function RecruiterDashboard({ token, onJoinRoom }) {
             onChange={set("scheduledAt")}
           />
           <textarea
-            placeholder="Message to candidate (optional — appears in their invitation email)"
+            placeholder="Message to candidate (optional, appears in their invitation email)"
             value={form.description}
             onChange={set("description")}
             rows={3}
@@ -230,7 +235,14 @@ function RecruiterDashboard({ token, onJoinRoom }) {
                       onClick={() => sendEmail(interview._id)}
                       disabled={sendingId === interview._id}
                     >
-                      {sendingId === interview._id ? "Sending…" : "Send Email"}
+                      {sendingId === interview._id ? "Sending..." : "Send Email"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={() => navigator.clipboard?.writeText(interview.interviewLink)}
+                    >
+                      Copy Link
                     </button>
                     <button
                       type="button"

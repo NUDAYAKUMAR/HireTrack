@@ -15,7 +15,7 @@ const LANGUAGES = [
   { label: "Rust",       value: "rust"       },
   { label: "SQL",        value: "sql"        },
 ];
-const REACTIONS = ["👍","🔥","😊","🎉","🤔","💡","👏","❓"];
+const REACTIONS = ["OK", "+1", "Idea", "Good", "Question"];
 
 export default function InterviewRoom({ interview, user, token, onLeave }) {
   const isRecruiter = user?.role === "recruiter" || user?.role === "admin";
@@ -79,11 +79,11 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     setWarnCount(c);
     reportAct(type, detail);
     if (c >= 3) {
-      setWarnMsg("🚨 3rd violation — you are being removed…");
+      setWarnMsg("Third violation. You are being removed.");
       clearTimeout(warnTimer.current);
       setTimeout(() => { setKicked(true); setTimeout(onLeave, 1800); }, 2200);
     } else {
-      setWarnMsg(`⚠️ Warning ${c}/3: ${detail}  (${3 - c} left)`);
+      setWarnMsg(`Warning ${c}/3: ${detail} (${3 - c} left)`);
       clearTimeout(warnTimer.current);
       warnTimer.current = setTimeout(() => setWarnMsg(""), 5000);
     }
@@ -162,7 +162,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   /* ─── code execution ─── */
   const runCode = async () => {
     setIsRunning(true);
-    setOutput("⏳ Running code...");
+    setOutput("Running code...");
     setIsError(false);
     try {
       const langMap = {
@@ -186,7 +186,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       });
       if (!res.ok) {
         const text = await res.text();
-        setOutput(`❌ API Error ${res.status}: ${text}`);
+        setOutput(`API error ${res.status}: ${text}`);
         setIsError(true);
         setIsRunning(false);
         return;
@@ -198,7 +198,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       let finalOut = stdOut;
       
       if (hasErr) {
-          finalOut = errOut ? `Error:\n${errOut}\n\nOutput:\n${stdOut}` : (stdOut || "❌ Failed to execute");
+          finalOut = errOut ? `Error:\n${errOut}\n\nOutput:\n${stdOut}` : (stdOut || "Failed to execute");
       } else if (errOut) {
           finalOut = `stderr:\n${errOut}\n\nstdout:\n${stdOut}`;
       } else {
@@ -209,7 +209,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       setIsError(hasErr);
       socketRef.current?.emit("code:output", { roomId: interview.pin, output: finalOut, isError: hasErr });
     } catch (err) {
-      setOutput(`❌ Failed to connect to execution engine.\n\nDetails: ${err.message}`);
+      setOutput(`Failed to connect to execution engine.\n\nDetails: ${err.message}`);
       setIsError(true);
     }
     setIsRunning(false);
@@ -361,7 +361,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     return (
       <div className="fs-gate">
         <div className="fs-gate-card">
-          <div className="fs-gate-icon">🔒</div>
+          <div className="fs-gate-icon">Lock</div>
           <h2>Fullscreen Required</h2>
           <p>This interview runs in <strong>fullscreen only</strong>. Tab switching, copy &amp; paste are monitored.</p>
           <p className="fs-gate-warn">You get <strong>3 warnings</strong> before being removed.</p>
@@ -381,7 +381,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     return (
       <div className="fs-gate kicked-screen">
         <div className="fs-gate-card">
-          <div className="fs-gate-icon">🚫</div>
+          <div className="fs-gate-icon">Removed</div>
           <h2>Removed from Interview</h2>
           <p>You exceeded the maximum violations and have been removed.</p>
         </div>
@@ -407,7 +407,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       {/* Header */}
       <header className="int-header">
         <div className="int-header-left">
-          <span className="int-kicker">{isRecruiter ? "Recruiter · Live Session" : "Interview in Progress"}</span>
+          <span className="int-kicker">{isRecruiter ? "Recruiter / Live Session" : "Interview in Progress"}</span>
           <h2 className="int-title">{interview.title}</h2>
         </div>
         <div className="int-header-center">
@@ -435,10 +435,10 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
           {/* Panel tabs */}
           <div className="int-tabs">
             <button className={`int-tab ${panel === "code" ? "int-tab-active" : ""}`} onClick={() => setPanel("code")}>
-              💻 Code Editor
+              Code Editor
             </button>
             <button className={`int-tab ${panel === "whiteboard" ? "int-tab-active" : ""}`} onClick={() => setPanel("whiteboard")}>
-              🎨 Whiteboard
+              Whiteboard
             </button>
             {panel === "code" && (
               <select className="lang-select" value={language} onChange={handleLangChange}>
@@ -462,7 +462,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
           {/* Code editor */}
           {panel === "code" && (
             <div className="int-editor-wrap">
-              {isRecruiter && <div className="live-overlay">👁 LIVE — Candidate's Code</div>}
+              {isRecruiter && <div className="live-overlay">Live candidate code</div>}
               <div style={{ flex: 1, minHeight: 0 }}>
                 <Editor
                   height="100%"
@@ -478,7 +478,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
                 <div className="output-header">
                   <span>Console Output</span>
                   <button className="int-btn int-btn-success" onClick={runCode} disabled={isRunning} style={{ padding: "4px 12px", fontSize: "11px" }}>
-                    {isRunning ? "Running..." : "▶ Run Code"}
+                    {isRunning ? "Running..." : "Run Code"}
                   </button>
                 </div>
                 <div className={`output-content ${isError ? "output-error" : ""}`}>
@@ -538,7 +538,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
           {/* Questions */}
           <div className="side-section">
             <div className="side-section-head">
-              <span>📋 Questions</span>
+              <span>Questions</span>
               <span className="q-badge">{questions.length}</span>
             </div>
             <ol className="q-ol">
@@ -564,7 +564,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
           {isRecruiter && (
             <div className="side-section act-section">
               <div className="side-section-head">
-                <span>📊 Activity</span>
+                <span>Activity</span>
                 {activities.length > 0 && <span className="act-badge">{activities.length}</span>}
               </div>
               <div className="act-list">
@@ -580,7 +580,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
 
           {/* Chat */}
           <div className="side-section chat-section">
-            <div className="side-section-head"><span>💬 Chat</span></div>
+            <div className="side-section-head"><span>Chat</span></div>
             <div className="chat-msgs">
               {messages.length === 0 && <p className="side-empty">No messages yet.</p>}
               {messages.map((m, i) => (
@@ -594,7 +594,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
             <form className="chat-input-row" onSubmit={sendChat}>
               <input className="chat-input" placeholder="Type a message…" value={chatInput} autoComplete="off"
                 onChange={e => setChatInput(e.target.value)} />
-              <button type="submit" className="int-btn int-btn-primary">➤</button>
+              <button type="submit" className="int-btn int-btn-primary">Send</button>
             </form>
           </div>
         </aside>

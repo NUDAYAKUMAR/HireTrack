@@ -91,7 +91,7 @@ function App() {
               Join Room
             </button>
             <span className="nav-user">
-              {auth.user?.name} · <em>{role}</em>
+              {auth.user?.name} / <em>{role}</em>
             </span>
             <button className="btn btn-light" onClick={logout}>
               Logout

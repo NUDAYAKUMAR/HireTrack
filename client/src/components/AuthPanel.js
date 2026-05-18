@@ -69,12 +69,12 @@ function AuthPanel({ onAuth }) {
           and conduct live coding rounds with video and whiteboard support.
         </p>
         <ul className="feature-list">
-          <li>🔒 Role-based access — Admin, Recruiter, Candidate</li>
-          <li>📧 Automated email invitations with PIN</li>
-          <li>💻 Real-time collaborative code editor</li>
-          <li>🎥 Camera monitoring &amp; activity detection</li>
-          <li>🖊️ Shared whiteboard</li>
-          <li>⚠️ Tab-switch, copy &amp; paste detection</li>
+          <li>Role-based access for Admin, Recruiter, and Candidate</li>
+          <li>Automated invitation emails with PIN access</li>
+          <li>Real-time coding, chat, and shared whiteboard tools</li>
+          <li>Video sessions with candidate activity monitoring</li>
+          <li>Question management and code execution support</li>
+          <li>Tab-switch, copy, and paste detection</li>
         </ul>
       </div>
 
@@ -119,7 +119,7 @@ function AuthPanel({ onAuth }) {
             </select>
             {form.role === "recruiter" && (
               <p className="muted" style={{ fontSize: 13 }}>
-                ℹ️ Recruiter accounts are reviewed by an admin before activation.
+                Recruiter accounts are reviewed by an admin before activation.
               </p>
             )}
           </>

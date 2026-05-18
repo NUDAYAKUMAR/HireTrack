@@ -87,20 +87,20 @@ function AdminDashboard({ token }) {
       <section className="metric-row">
         <article className="metric-card">
           <span>Total users</span>
-          <strong>{stats?.users ?? "—"}</strong>
+          <strong>{stats?.users ?? "-"}</strong>
         </article>
         <article className="metric-card">
           <span>Total interviews</span>
-          <strong>{stats?.interviews ?? "—"}</strong>
+          <strong>{stats?.interviews ?? "-"}</strong>
         </article>
         <article className="metric-card">
           <span>Live now</span>
-          <strong>{stats?.liveInterviews ?? "—"}</strong>
+          <strong>{stats?.liveInterviews ?? "-"}</strong>
         </article>
         <article className="metric-card" style={{ borderColor: pendingRecruiters.length ? "#f59e0b" : undefined }}>
           <span>Pending recruiters</span>
           <strong style={{ color: pendingRecruiters.length ? "#d97706" : undefined }}>
-            {stats?.pendingRecruiters ?? "—"}
+            {stats?.pendingRecruiters ?? "-"}
           </strong>
         </article>
       </section>
@@ -134,7 +134,7 @@ function AdminDashboard({ token }) {
 
           {pendingRecruiters.length > 0 && (
             <div className="pending-banner">
-              ⚠️ {pendingRecruiters.length} recruiter{pendingRecruiters.length > 1 ? "s" : ""} pending approval
+              {pendingRecruiters.length} recruiter{pendingRecruiters.length > 1 ? "s" : ""} pending approval
             </div>
           )}
 
