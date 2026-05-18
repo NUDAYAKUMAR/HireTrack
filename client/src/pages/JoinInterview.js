@@ -3,7 +3,9 @@ import { useState } from "react";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function JoinInterview({ onJoined }) {
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(() => {
+    return localStorage.getItem("invite-pin") || "";
+  });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +30,7 @@ function JoinInterview({ onJoined }) {
         return;
       }
 
+      localStorage.removeItem("invite-pin");
       onJoined?.(data.interview);
     } catch (error) {
       setMessage("Server unavailable");

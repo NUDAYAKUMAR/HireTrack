@@ -53,6 +53,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   const warnTimer   = useRef(null);
   const warnRef     = useRef(0);
   const authH       = { Authorization: `Bearer ${token}` };
+  const pendingOfferRef = useRef(null);
 
   /* ─── WebRTC peer setup ─── */
   const createPC = useCallback((stream) => {
@@ -62,7 +63,11 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" }
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
+        { urls: "stun:stun.services.mozilla.com" }
       ]
     });
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
@@ -289,10 +294,26 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
 
     const initiateOffer = async () => {
       if (!localSRef.current) return;
+      if (peerRef.current && peerRef.current.signalingState !== "stable") return;
+      
       const pc = createPC(localSRef.current);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       socket.emit("webrtc:offer", { roomId, offer });
+    };
+
+    const handleReceiveOffer = async (offer) => {
+      const pc = createPC(localSRef.current);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit("webrtc:answer", { roomId, answer });
+
+      // Process any queued candidates
+      while (iceQueue.length > 0) {
+        const cand = iceQueue.shift();
+        try { await pc.addIceCandidate(cand); } catch (_) {}
+      }
     };
 
     /* When someone new joins, tell them we are ready (if we already have camera) */
@@ -314,20 +335,15 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
         socket.emit("webrtc:ready", { roomId });
       }
     });
-    socket.on("webrtc:offer", async (offer) => {
-      if (!localSRef.current) return;
-      const pc = createPC(localSRef.current);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit("webrtc:answer", { roomId, answer });
 
-      // Process any queued candidates
-      while (iceQueue.length > 0) {
-        const cand = iceQueue.shift();
-        try { await pc.addIceCandidate(cand); } catch (_) {}
+    socket.on("webrtc:offer", async (offer) => {
+      if (!localSRef.current) {
+        pendingOfferRef.current = offer;
+        return;
       }
+      await handleReceiveOffer(offer);
     });
+
     socket.on("webrtc:answer", async (answer) => {
       const pc = peerRef.current;
       if (pc) {
@@ -339,6 +355,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
         }
       }
     });
+
     socket.on("webrtc:ice", async (candidate) => {
       const cand = new RTCIceCandidate(candidate);
       const pc = peerRef.current;
@@ -350,7 +367,26 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     });
 
     /* camera – use localSRef so WebRTC handlers can access the stream */
-    navigator.mediaDevices?.getUserMedia({ video: true, audio: true })
+    const startMedia = async () => {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (err) {
+        console.warn("Failed to get video+audio, trying video-only...", err);
+        try {
+          return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } catch (err2) {
+          console.warn("Failed to get video, trying audio-only...", err2);
+          try {
+            return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+          } catch (err3) {
+            console.error("All media capture attempts failed:", err3);
+            throw err3;
+          }
+        }
+      }
+    };
+
+    startMedia()
       .then(stream => {
         localSRef.current = stream;
         if (myVidRef.current) myVidRef.current.srcObject = stream;
@@ -358,12 +394,18 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
         // Notify others
         socket.emit("webrtc:ready", { roomId });
 
+        // If a pending offer arrived during hardware permission wait, answer it now!
+        if (pendingOfferRef.current) {
+          handleReceiveOffer(pendingOfferRef.current);
+          pendingOfferRef.current = null;
+        }
+
         // If recruiter and candidate was already in room ready, kickstart offer
         if (isRecruiter && peerReady) {
           initiateOffer();
         }
       })
-      .catch(() => { if (!isRecruiter) triggerWarn("camera-denied", "Camera access denied"); });
+      .catch(() => { if (!isRecruiter) triggerWarn("camera-denied", "Camera or Microphone access denied"); });
 
     if (!isRecruiter) {
       const onVis  = () => { if (document.hidden) triggerWarn("tab-switch", "Switched tabs"); };
