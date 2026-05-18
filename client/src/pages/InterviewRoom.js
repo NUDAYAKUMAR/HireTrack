@@ -166,23 +166,22 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     setIsError(false);
     try {
       const langMap = {
-        javascript: { language: "javascript", version: "18.15.0" },
-        python:     { language: "python",     version: "3.10.0"  },
-        java:       { language: "java",       version: "15.0.2"  },
-        cpp:        { language: "c++",        version: "10.2.0"  },
-        typescript: { language: "typescript", version: "5.0.3"   },
-        go:         { language: "go",         version: "1.16.2"  },
-        rust:       { language: "rust",       version: "1.50.0"  },
-        sql:        { language: "sqlite3",    version: "3.36.0"  },
+        javascript: "nodejs-20.17.0",
+        python:     "cpython-3.14.0",
+        java:       "openjdk-jdk-22+36",
+        cpp:        "gcc-head",
+        typescript: "typescript-5.6.2",
+        go:         "go-1.23.2",
+        rust:       "rust-1.82.0",
+        sql:        "sqlite-3.46.1",
       };
-      const { language: lang, version } = langMap[language] || { language, version: "*" };
-      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+      const compilerName = langMap[language] || "gcc-head";
+      const res = await fetch("https://wandbox.org/api/compile.json", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          language: lang,
-          version,
-          files: [{ name: "main", content: code }]
+          compiler: compilerName,
+          code: code
         })
       });
       if (!res.ok) {
@@ -193,16 +192,22 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
         return;
       }
       const data = await res.json();
-      if (data.run) {
-        const out = data.run.output || data.run.stdout || "(no output)";
-        const hasErr = data.run.code !== 0 || !!data.run.stderr;
-        setOutput(hasErr && data.run.stderr ? `stderr:\n${data.run.stderr}\n\nstdout:\n${data.run.stdout}` : out);
-        setIsError(hasErr);
-        socketRef.current?.emit("code:output", { roomId: interview.pin, output: out, isError: hasErr });
+      const hasErr = data.status !== "0";
+      const errOut = data.program_error || data.compiler_error || data.compiler_message;
+      const stdOut = data.program_output || data.compiler_output || "";
+      let finalOut = stdOut;
+      
+      if (hasErr) {
+          finalOut = errOut ? `Error:\n${errOut}\n\nOutput:\n${stdOut}` : (stdOut || "❌ Failed to execute");
+      } else if (errOut) {
+          finalOut = `stderr:\n${errOut}\n\nstdout:\n${stdOut}`;
       } else {
-        setOutput(data.message || "❌ Failed to execute");
-        setIsError(true);
+          finalOut = stdOut || "(no output)";
       }
+      
+      setOutput(finalOut);
+      setIsError(hasErr);
+      socketRef.current?.emit("code:output", { roomId: interview.pin, output: finalOut, isError: hasErr });
     } catch (err) {
       setOutput(`❌ Failed to connect to execution engine.\n\nDetails: ${err.message}`);
       setIsError(true);
@@ -509,15 +514,25 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
         {/* ── RIGHT: sidebar ── */}
         <aside className="int-sidebar">
           {/* Camera feeds */}
-          <div className="cam-feeds">
-            <div className="cam-box">
-              <video ref={myVidRef} autoPlay muted playsInline className="cam-vid" />
-              <span className="cam-label">You</span>
-            </div>
-            <div className="cam-box">
+          <div className="cam-feeds combined-cam" id="cam-container">
+            <div className="cam-box remote-cam">
               <video ref={remVidRef} autoPlay playsInline className="cam-vid" />
               <span className="cam-label">{isRecruiter ? "Candidate" : "Recruiter"}</span>
             </div>
+            <div className="cam-box local-cam-pip">
+              <video ref={myVidRef} autoPlay muted playsInline className="cam-vid" />
+              <span className="cam-label">You</span>
+            </div>
+            <button className="cam-fullscreen-btn" onClick={(e) => {
+               const el = document.getElementById("cam-container");
+               if (!document.fullscreenElement) {
+                 el.requestFullscreen().catch(()=>{});
+               } else {
+                 document.exitFullscreen().catch(()=>{});
+               }
+            }} title="Toggle Fullscreen">
+              ⛶
+            </button>
           </div>
 
           {/* Questions */}
