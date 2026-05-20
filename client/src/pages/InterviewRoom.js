@@ -41,10 +41,19 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   const [isError,       setIsError]       = useState(false);
   const [videoEnabled,  setVideoEnabled]  = useState(true);
   const [audioEnabled,  setAudioEnabled]  = useState(true);
+  const [mediaError,    setMediaError]    = useState(null);
+  const [mediaRetryKey, setMediaRetryKey] = useState(0);
+  const [remoteStreamActive, setRemoteStreamActive] = useState(false);
+
+  const retryMedia = () => {
+    setMediaError(null);
+    setMediaRetryKey(prev => prev + 1);
+  };
 
   const socketRef   = useRef(null);
   const myVidRef    = useRef(null);
   const remVidRef   = useRef(null);
+  const remoteSRef  = useRef(null);
   const canvasRef   = useRef(null);
   const peerRef     = useRef(null);
   const localSRef   = useRef(null);
@@ -54,6 +63,14 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   const warnRef     = useRef(0);
   const authH       = { Authorization: `Bearer ${token}` };
   const pendingOfferRef = useRef(null);
+
+  const attachVideoStream = useCallback((videoEl, stream) => {
+    if (!videoEl || !stream) return;
+    if (videoEl.srcObject !== stream) {
+      videoEl.srcObject = stream;
+    }
+    videoEl.play().catch(() => {});
+  }, []);
 
   /* ─── WebRTC peer setup ─── */
   const createPC = useCallback((stream) => {
@@ -72,9 +89,11 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     });
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
     pc.ontrack = (event) => {
-      if (remVidRef.current && event.streams[0]) {
-        remVidRef.current.srcObject = event.streams[0];
-        remVidRef.current.play().catch(() => {});
+      const [remoteStream] = event.streams;
+      if (remoteStream) {
+        remoteSRef.current = remoteStream;
+        setRemoteStreamActive(true);
+        attachVideoStream(remVidRef.current, remoteStream);
       }
     };
     pc.onicecandidate = ({ candidate }) => {
@@ -82,7 +101,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     };
     peerRef.current = pc;
     return pc;
-  }, [interview.pin]);
+  }, [attachVideoStream, interview.pin]);
 
   /* ─── warn helper (candidate) ─── */
   const triggerWarn = useCallback((type, detail) => {
@@ -258,11 +277,30 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
   useEffect(() => {
     if (!isRecruiter && !fsGranted) return;
 
-    const socket = io(API_URL, { transports: ["websocket"] });
+    const myVidEl = myVidRef.current;
+    const remVidEl = remVidRef.current;
+
+    const socket = io(API_URL, {
+      autoConnect: false,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
     socketRef.current = socket;
     const roomId = interview.pin;
 
-    socket.emit("room:join", { roomId, user: user || { name: "Guest" } });
+    const emitReady = () => {
+      if (socket.connected && localSRef.current) {
+        socket.emit("webrtc:ready", { roomId });
+      }
+    };
+
+    socket.on("connect", () => {
+      socket.emit("room:join", { roomId, user: user || { name: "Guest" } });
+      emitReady();
+    });
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection failed:", err.message);
+    });
 
     socket.on("editor:change",    val      => setCode(val));
     socket.on("lang:change",      lang     => setLanguage(lang));
@@ -318,7 +356,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
 
     /* When someone new joins, tell them we are ready (if we already have camera) */
     socket.on("room:user-joined", () => {
-      if (localSRef.current) socket.emit("webrtc:ready", { roomId });
+      emitReady();
     });
 
     const iceQueue = [];
@@ -332,7 +370,7 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
         await initiateOffer();
       } else {
         // Re-emit ready so caller (recruiter) knows to initiate offer
-        socket.emit("webrtc:ready", { roomId });
+        emitReady();
       }
     });
 
@@ -368,18 +406,39 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
 
     /* camera – use localSRef so WebRTC handlers can access the stream */
     const startMedia = async () => {
+      const getMediaMessage = (err) => {
+        if (err.name === "NotReadableError" || err.message?.includes("in use") || err.message?.includes("could not start")) {
+          return "Camera or microphone is already in use by another application or browser tab. Please close other apps and click Retry.";
+        }
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          return "Camera or microphone access was denied. Please allow permissions in your browser address bar and click Retry.";
+        }
+        if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          return "No camera or microphone hardware was detected. Please connect a device and click Retry.";
+        }
+        return err.message || "Could not access camera or microphone.";
+      };
+
       try {
-        return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        setMediaError(null);
+        return stream;
       } catch (err) {
         console.warn("Failed to get video+audio, trying video-only...", err);
         try {
-          return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          setMediaError(null);
+          return stream;
         } catch (err2) {
           console.warn("Failed to get video, trying audio-only...", err2);
           try {
-            return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            setMediaError(null);
+            return stream;
           } catch (err3) {
             console.error("All media capture attempts failed:", err3);
+            const msg = getMediaMessage(err3);
+            setMediaError(msg);
             throw err3;
           }
         }
@@ -389,10 +448,10 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     startMedia()
       .then(stream => {
         localSRef.current = stream;
-        if (myVidRef.current) myVidRef.current.srcObject = stream;
+        attachVideoStream(myVidEl, stream);
         
         // Notify others
-        socket.emit("webrtc:ready", { roomId });
+        emitReady();
 
         // If a pending offer arrived during hardware permission wait, answer it now!
         if (pendingOfferRef.current) {
@@ -405,7 +464,12 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
           initiateOffer();
         }
       })
-      .catch(() => { if (!isRecruiter) triggerWarn("camera-denied", "Camera or Microphone access denied"); });
+      .catch((err) => {
+        console.error("Media setup failed, running offline fallback:", err);
+        reportAct("camera-failed", "Camera/Microphone connection failed or blocked");
+      });
+
+    socket.connect();
 
     if (!isRecruiter) {
       const onVis  = () => { if (document.hidden) triggerWarn("tab-switch", "Switched tabs"); };
@@ -421,7 +485,13 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       return () => {
         socket.disconnect();
         peerRef.current?.close();
-        localSRef.current?.getTracks().forEach(t => t.stop());
+        if (localSRef.current) {
+          localSRef.current.getTracks().forEach(t => t.stop());
+        }
+        if (myVidEl) myVidEl.srcObject = null;
+        if (remVidEl) remVidEl.srcObject = null;
+        remoteSRef.current = null;
+        setRemoteStreamActive(false);
         document.removeEventListener("visibilitychange", onVis);
         document.removeEventListener("paste", onPaste);
         document.removeEventListener("copy",  onCopy);
@@ -433,9 +503,23 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
     return () => {
       socket.disconnect();
       peerRef.current?.close();
-      localSRef.current?.getTracks().forEach(t => t.stop());
+      if (localSRef.current) {
+        localSRef.current.getTracks().forEach(t => t.stop());
+      }
+      if (myVidEl) myVidEl.srcObject = null;
+      if (remVidEl) remVidEl.srcObject = null;
+      remoteSRef.current = null;
+      setRemoteStreamActive(false);
     };
-  }, [interview.pin, isRecruiter, fsGranted, createPC, showFloat, triggerWarn, user]);
+  }, [interview.pin, isRecruiter, fsGranted, createPC, showFloat, triggerWarn, user, mediaRetryKey, reportAct, attachVideoStream]);
+
+  useEffect(() => {
+    attachVideoStream(myVidRef.current, localSRef.current);
+  }, [attachVideoStream, mediaError]);
+
+  useEffect(() => {
+    attachVideoStream(remVidRef.current, remoteSRef.current);
+  }, [attachVideoStream, remoteStreamActive]);
 
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -514,6 +598,17 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       {/* Warning banner */}
       {warnMsg && (
         <div className={`int-warn-banner ${warnCount >= 3 ? "warn-critical" : ""}`}>{warnMsg}</div>
+      )}
+
+      {/* Media Error banner */}
+      {mediaError && (
+        <div className="int-media-error-banner">
+          <span className="media-err-badge">⚠️ Device Error</span>
+          <span className="media-err-msg">{mediaError}</span>
+          <button type="button" className="int-btn int-btn-ghost" onClick={retryMedia} style={{ padding: "4px 10px", fontSize: "12px", background: "rgba(255,255,255,0.15)", marginLeft: "auto" }}>
+            🔄 Retry Camera
+          </button>
+        </div>
       )}
 
       {/* Header */}
@@ -629,19 +724,40 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
           <div className="cam-feeds combined-cam" id="cam-container">
             <div className="cam-box remote-cam">
               <video ref={remVidRef} autoPlay playsInline className="cam-vid" />
+              {!remoteStreamActive && (
+                <div className="cam-offline-placeholder">
+                  <div className="avatar-pulse">
+                    <span className="avatar-initials">
+                      {isRecruiter ? (interview.candidateName ? interview.candidateName[0].toUpperCase() : "C") : "R"}
+                    </span>
+                  </div>
+                  <span className="cam-status-text">Waiting for feed...</span>
+                </div>
+              )}
               <span className="cam-label">{isRecruiter ? "Candidate" : "Recruiter"}</span>
             </div>
             <div className="cam-box local-cam-pip">
-              <video ref={myVidRef} autoPlay muted playsInline className="cam-vid" />
+              {mediaError ? (
+                <div className="cam-offline-placeholder local-offline">
+                  <div className="avatar-initials-mini">
+                    {user?.name ? user.name[0].toUpperCase() : "U"}
+                  </div>
+                  <span className="cam-status-text-mini">Blocked</span>
+                </div>
+              ) : (
+                <video ref={myVidRef} autoPlay muted playsInline className="cam-vid" />
+              )}
               <span className="cam-label">You</span>
-              <div className="cam-controls">
-                <button type="button" className="cam-ctrl-btn" onClick={toggleVideo} title={videoEnabled ? "Turn Camera Off" : "Turn Camera On"}>
-                  {videoEnabled ? "📹" : "❌📹"}
-                </button>
-                <button type="button" className="cam-ctrl-btn" onClick={toggleAudio} title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}>
-                  {audioEnabled ? "🎙️" : "❌🎙️"}
-                </button>
-              </div>
+              {!mediaError && (
+                <div className="cam-controls">
+                  <button type="button" className="cam-ctrl-btn" onClick={toggleVideo} title={videoEnabled ? "Turn Camera Off" : "Turn Camera On"}>
+                    {videoEnabled ? "📹" : "❌📹"}
+                  </button>
+                  <button type="button" className="cam-ctrl-btn" onClick={toggleAudio} title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}>
+                    {audioEnabled ? "🎙️" : "❌🎙️"}
+                  </button>
+                </div>
+              )}
             </div>
             <button className="cam-fullscreen-btn" onClick={(e) => {
                const el = document.getElementById("cam-container");

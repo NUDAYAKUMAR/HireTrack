@@ -284,3 +284,110 @@
   .int-sidebar { border-top: 1px solid rgba(59,130,246,0.12); max-height: 300px; flex-direction: row; overflow-x: auto; }
   .int-shell { height: auto; }
 }
+
+/* Device Error Banner & Offline Fallback Graphics */
+.int-media-error-banner {
+  background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 100%);
+  border-bottom: 2px solid #ef4444;
+  color: #fee2e2;
+  font-size: 13px;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideDown 0.3s ease;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.media-err-badge {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.media-err-msg {
+  flex: 1;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.cam-offline-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #0e1a30 0%, #060c1a 100%);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  gap: 12px;
+}
+.local-offline {
+  gap: 6px !important;
+}
+.avatar-pulse {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.15);
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+  animation: avatarPulse 2s infinite ease-in-out;
+}
+.avatar-initials {
+  font-size: 28px;
+  font-weight: 800;
+  color: #a5b4fc;
+  text-shadow: 0 0 10px rgba(165, 180, 252, 0.4);
+}
+.avatar-initials-mini {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fca5a5;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+.cam-status-text {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.cam-status-text-mini {
+  font-size: 8px;
+  color: #fca5a5;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+@keyframes avatarPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45);
+    transform: scale(1);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(99, 102, 241, 0);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    transform: scale(1);
+  }
+}

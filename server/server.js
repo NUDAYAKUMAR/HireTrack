@@ -13,20 +13,32 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const clientUrl = process.env.CLIENT_URL || "https://hiretrack-8iy2.onrender.com";
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://hiretrack-8iy2.onrender.com"
+].filter(Boolean);
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+};
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
 }
 
 const io = new Server(server, {
-  cors: {
-    origin: clientUrl,
-    methods: ["GET", "POST"]
-  }
+  cors: corsOptions
 });
 
-app.use(cors({ origin: clientUrl}));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -80,10 +92,10 @@ io.on("connection", (socket) => {
   });
 
   // WebRTC signaling
-  socket.on("webrtc:ready",  ({ roomId })            => socket.to(roomId).emit("webrtc:ready"));
-  socket.on("webrtc:offer",  ({ roomId, offer })     => socket.to(roomId).emit("webrtc:offer",  offer));
-  socket.on("webrtc:answer", ({ roomId, answer })    => socket.to(roomId).emit("webrtc:answer", answer));
-  socket.on("webrtc:ice",    ({ roomId, candidate }) => socket.to(roomId).emit("webrtc:ice",    candidate));
+  socket.on("webrtc:ready", ({ roomId }) => socket.to(roomId).emit("webrtc:ready"));
+  socket.on("webrtc:offer", ({ roomId, offer }) => socket.to(roomId).emit("webrtc:offer", offer));
+  socket.on("webrtc:answer", ({ roomId, answer }) => socket.to(roomId).emit("webrtc:answer", answer));
+  socket.on("webrtc:ice", ({ roomId, candidate }) => socket.to(roomId).emit("webrtc:ice", candidate));
 });
 
 const PORT = process.env.PORT || 5000;
