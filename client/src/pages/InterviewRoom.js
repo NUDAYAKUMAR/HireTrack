@@ -316,7 +316,8 @@ export default function InterviewRoom({ interview, user, token, onLeave }) {
       const cv = canvasRef.current;
       if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
     });
-    socket.on("whiteboard:draw", ({ payload }) => {
+    socket.on("whiteboard:draw", (message) => {
+      const payload = message?.payload || message;
       const cv = canvasRef.current;
       if (!cv) return;
       const ctx = cv.getContext("2d");
